@@ -47,18 +47,3 @@ swap_activate()
   done
 }
 
-restore_config()
-{
-   . /etc/dbdiff/config
-
-   for DIR in /mnt/*
-   do
-      if [ -r "$DIR/$CONFIGSAVE" ]; then
-          if [ "`cat /tmp/config_restored | egrep \"^$DIR\"`" = "" ];
-	  then # do not restore the same file more than once
-             configrestore "$DIR/$CONFIGSAVE"
-             echo "$DIR" >>/tmp/config_restored
-	  fi
-      fi
-   done
-}
