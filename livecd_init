@@ -37,7 +37,7 @@ done
 if [ "${#LIVECD_PATH}" -lt 4 ]; then # there should be at least "/mnt"
   echo "cannot find your cram files!"
   #exit
-  /box/sh
+  /bbox/sh
 fi
 
 # mount all images
