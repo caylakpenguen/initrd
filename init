@@ -1,15 +1,22 @@
 #!/bbox/sh
+# CaylakPenguen http://www.truvalinux.org.tr
 export PATH=.:/bbox
 echo " Efenim Hos Geldiniz"
 echo ""
 echo " Ne iyi ettiniz"
 echo ""
 echo " Tarih `date`"
-mkdir -p /proc /sys /tmp
+mkdir -p /proc /sys /tmp /mnt
 mount  -t proc proc /proc
 mount  -t sysfs sys /sys
 mdev -s
-#--------
+#----
+echo " Moduller Yukleniyor"
+modprobe loop
+modprobe squashfs
+#----
 if [ -x /bbox/livecd_init ]; then
    /bbox/livecd_init
 fi
+#----
+
