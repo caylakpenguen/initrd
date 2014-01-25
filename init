@@ -6,3 +6,10 @@ echo " Ne iyi ettiniz"
 echo ""
 echo " Tarih `date`"
 mkdir -p /proc /sys /tmp
+mount  -t proc proc /proc
+mount  -t sysfs sys /sys
+mdev -s
+#--------
+if [ -x /bbox/livecd_init ]; then
+   /bbox/livecd_init
+fi
