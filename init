@@ -1,0 +1,8 @@
+#!/bbox/sh
+export PATH=.:/bbox
+echo " Efenim Hos Geldiniz"
+echo ""
+echo " Ne iyi ettiniz"
+echo ""
+echo " Tarih `date`"
+mkdir -p /proc /sys /tmp

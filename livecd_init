@@ -1,0 +1,142 @@
+#!/bin/bash
+#
+# livecd_init:   this script have to be called at the system init,
+#                to find the boot cd and to mount directories.
+#                The best is to call it from /etc/rc.d/rc.S
+#
+# Author:	 Tomas Matejicek <http://www.slackware-live.org>
+
+echo "Sleep 8 for USB stick boot"
+sleep 8
+
+. /etc/rc.d/mount_functions
+
+# call mount_cd function, to mount /dev/hdc hdd etc.
+#echo "Mounting all available CDs..."
+mount_cds
+
+
+#echo "mounting other discs..."
+mount_all_discs
+
+LIVECD_SUBDIR="`cat /proc/cmdline | egrep -io \"livecd_subdir=([-/.a-z0-9_]*)\"`"
+LIVECD_SUBDIR="`echo \"$LIVECD_SUBDIR/\" | cut -b 15-`"
+LIVECD_FIND="$LIVECD_SUBDIR"/bin.img
+
+# look which directory is our CD
+for DIR in /mnt/*
+do
+  if [ -r "$DIR/$LIVECD_FIND" ]; then
+     export LIVECD_MOUNT="$DIR"
+     export LIVECD_PATH=`dirname "$DIR/$LIVECD_FIND"`
+     break
+  fi
+done
+
+# if none, exit
+if [ "${#LIVECD_PATH}" -lt 4 ]; then # there should be at least "/mnt"
+  echo "cannot find your cram files!"
+  #exit
+  /bin/bash
+fi
+
+# mount all crams
+echo "Mounting bin..."
+mount -n -o loop $LIVECD_PATH/bin.img /bin
+echo "Mounting lib..."
+mount -n -o loop $LIVECD_PATH/lib.img /lib
+echo "Mounting opt..."
+mount -n -o loop $LIVECD_PATH/opt.img /opt
+echo "Mounting usr..."
+mount -n -o loop $LIVECD_PATH/usr.img /usr
+echo "Mounting sbin..."
+mount -n -o loop $LIVECD_PATH/sbin.img /sbin
+
+echo "freeing unused memory from ramdisk..."
+mount /dev/ram0 /mnt
+rm -Rf /mnt/{bin,boot,lib,sbin}/*
+cp /lib/libc{-,.}* /mnt/lib
+cp /bin/{echo,mount,umount,sync} /mnt/bin
+cp /sbin/{halt,reboot,poweroff,shutdown} /mnt/sbin
+cp /usr/bin/eject /mnt/usr/bin
+umount /mnt
+
+echo "activating swap if possible..."
+swap_activate
+
+# create dynamic ramdisk by using virtual filesystem (tmpfs)
+echo "creating tmpfs for /usr/local ... 80% of physical RAM will be available..."
+MEM="`free |egrep -io \"Mem:[^0-9]+[0-9]+\" |egrep -o \"[0-9]+\"`" # mem avail
+MAX="`expr $MEM \- 13312`" # minus 16MB, initrd is there
+TOT="`expr $MAX \/ 10 \* 8192`" # 80% in Bytes
+mount -t tmpfs -o size=$TOT tmpfs /usr/local
+echo "done, $TOT of total bytes available"
+
+echo "creating /tmp, /root links and /usr/local directories..."
+mkdir -p /usr/local/{bin,etc,include,info,lib,man,sbin,src,root,tmp,www}
+mkdir -p /usr/local/man/{cat,man}{1,2,3,4,5,6,7,8,9,n}
+rm -fR /root ; ln -sf /usr/local/root /root
+rm -fR /tmp ; ln -sf /usr/local/tmp /tmp
+mkdir /sys
+
+echo "extracting files to /root..."
+tar -zxmf $LIVECD_PATH/root.tar.gz -C /usr/local 2>/dev/null >/dev/null
+tar -zxmf $LIVECD_PATH/named.tar.gz -C /var 2>/dev/null >/dev/null
+
+# modification JGG full version firewall or hotspot need 128MBytes RAM
+#echo "extracting files to /usr/local/..."
+# usrlocal.tar.gz has clam
+
+# obsolete qmail
+#echo "extracting qmail..."
+#tar -zxmf $LIVECD_PATH/usrlocal.tar.gz -C / 2>/dev/null >/dev/null
+#tar -zxmf $LIVECD_PATH/qmail.tar.gz -C /var 2>/dev/null >/dev/null
+#tar -zxmf $LIVECD_PATH/qmailscan.tar.gz -C /var/spool 2>/dev/null >/dev/null
+#ln -s /usr/local/qmail /var/qmail
+#ln -s /usr/local/spool/qmailscan /var/spool/qmailscan
+
+#obsolete echo "extracting squid..."
+#tar -zxmf $LIVECD_PATH/varsquid.tar.gz -C / 2>/dev/null >/dev/null
+#ln -s /usr/local/squid /var/squid
+
+#echo "extracting samba..."
+#tar -zxmf $LIVECD_PATH/samba-var.tar.gz -C / 2>/dev/null >/dev/null
+#ln -s /var/codepages /etc
+
+#echo "extracting sesame package to /usr/local/sesame"
+#tar -zxmf $LIVECD_PATH/sesame.tar.gz -C /usr/local 2>/dev/null >/dev/null
+#ln -s /usr/local/sesame/htdocs /var/www/htdocs/sesame
+#ln -s /usr/local/sesame/cgi-bin/login /var/www/cgi-bin
+#ln -s /usr/local/sesame/cgi-bin/logout /var/www/cgi-bin
+#ln -s /usr/local/sesame/cgi-bin/stats /var/www/cgi-bin
+#ln -s /usr/local/sesame/cgi-bin/images /var/www/cgi-bin
+
+
+#echo "extracting voip package"
+#tar -zxmf $LIVECD_PATH/voip.tar.gz -C / 2>/dev/null >/dev/null
+#ln -s /usr/local/apache/htdocs /htdocs
+#rm -fr /var/lib/mysql
+#ln -s /usr/local/mysql /var/lib/mysql
+#mkdir /var/run/mysql
+#chown mysql.mysql /var/run/mysql
+
+#new qmail stuff
+#echo "extracting qmail imap sqwebmail package"
+#tar -zxmf $LIVECD_PATH/emailserver.tar.gz -C / 2>/dev/null >/dev/null
+#mv /var/cgi-bin/sqwebmail /var/www/cgi-bin
+
+
+
+#echo "preparing system for configsave..."
+#dbdiff makedb
+
+#echo "trying to find saved settings and restore them automatically..."
+#newly commented 2007/07
+#restore_config
+
+#debug
+#/bin/bash
+echo "dhcpd">>/etc/rc.d/rc.local
+tar -zxmf /home/mc.tar.gz -C / 2>/dev/null >/dev/null
+# now we can start autoexec script
+$LIVECD_PATH/autoexec

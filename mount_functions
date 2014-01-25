@@ -1,0 +1,64 @@
+#!/bin/bash
+#
+# mount_all_disks:  mount all partitions which are available for mounting
+#                   into /mnt/$partition. Will also try to find cdroms.
+#
+# Author:	    Tomas Matejicek <http://www.slackware-live.org>
+
+trymount()
+{
+  POINT=`echo $1 | egrep -io "[a-z0-9]+\$"`
+  if [ -r /mnt/$POINT ]; then
+     return
+  fi
+
+  mkdir /mnt/$POINT
+  mount $2 /dev/$POINT /mnt/$POINT
+
+  if [ ! $? = 0 ]; then
+    rmdir /mnt/$POINT
+  fi
+}
+
+mount_all_discs()
+{
+  # try to find all partitions and mount them
+  fdisk -l | egrep -io "^/dev/[a-z0-9]+" | while read LINE;
+  do
+    trymount $LINE >/dev/null 2>/dev/null
+  done
+}
+
+mount_cds()
+{
+  # try to find all CDROMs and mount them
+  for DEVICE in `cat /proc/sys/dev/cdrom/info | egrep -i "drive name" | cut -d ":" -f 2-`
+  do
+    trymount $DEVICE -n >/dev/null 2>/dev/null
+  done
+}
+
+swap_activate()
+{
+  # try to find all swaps and activate them
+  fdisk -l | egrep "Linux swap" | egrep -o "^/dev/[a-z0-9]+" | while read LINE;
+  do
+    swapon $LINE >/dev/null 2>/dev/null
+  done
+}
+
+restore_config()
+{
+   . /etc/dbdiff/config
+
+   for DIR in /mnt/*
+   do
+      if [ -r "$DIR/$CONFIGSAVE" ]; then
+          if [ "`cat /tmp/config_restored | egrep \"^$DIR\"`" = "" ];
+	  then # do not restore the same file more than once
+             configrestore "$DIR/$CONFIGSAVE"
+             echo "$DIR" >>/tmp/config_restored
+	  fi
+      fi
+   done
+}
