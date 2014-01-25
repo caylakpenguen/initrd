@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bbox/sh
 #
 # livecd_init:   this script have to be called at the system init,
 #                to find the boot cd and to mount directories.
@@ -37,7 +37,7 @@ done
 if [ "${#LIVECD_PATH}" -lt 4 ]; then # there should be at least "/mnt"
   echo "cannot find your cram files!"
   #exit
-  /bin/sh
+  /box/sh
 fi
 
 # mount all images
